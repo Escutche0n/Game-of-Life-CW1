@@ -6,6 +6,59 @@ import (
 	"strings"
 )
 
+func worker(height int, width int, world chan byte, out chan<- [][]byte) {
+	//Create the 2D slice to store tempWorld
+	tempWorld := make([][]byte, height)
+	for i := range tempWorld {
+		tempWorld[i] = make([]byte, width)
+	}
+
+	for x := 0; x < width; x++ {
+		tempWorld[0][x] = <-world
+		tempWorld[height][x] = <-world
+	}
+	for y := 1; y < height-1; y++ {
+		for x := 0; x < width; x++ {
+			tempWorld[y][x] = <-world
+		}
+	}
+
+	for y := 1; y < height-1; y++ {
+		for x := 0; x < width; x++ {
+			neighboursAlive := 0
+			for i := -1; i < 2; i++ {
+				for j := -1; j < 2; j++ {
+					if i == 0 && j == 0 {
+						continue
+					}
+					if tempWorld[(y+i+height)%height][(x+j+width)%width] != 0 {
+						neighboursAlive++
+					}
+				}
+			}
+			if tempWorld[y][x] == 255 {
+				if (neighboursAlive < 2) || (neighboursAlive > 3) {
+					tempWorld[y][x] = 0
+				} else {
+					tempWorld[y][x] = 255
+				}
+			}
+			if tempWorld[y][x] == 0 {
+				if neighboursAlive == 3 {
+					tempWorld[y][x] = 255
+				} else {
+					tempWorld[y][x] = 0
+				}
+			}
+		}
+	}
+	for y := 1; y < height-1; y++ {
+		for x := 0; x < width; x++ {
+			out <- tempWorld
+		}
+	}
+}
+
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p golParams, d distributorChans, alive chan []cell) {
 
@@ -15,10 +68,17 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		world[i] = make([]byte, p.imageWidth)
 	}
 
-	// Created another 2D slice to store the world that has cache.
-	nextWorld := make([][]byte, p.imageHeight)
-	for i := range nextWorld {
-		nextWorld[i] = make([]byte, p.imageWidth)
+	// 新建一个 workHeight 存储每个 worker 的高度
+	workerHeight := p.imageHeight / p.threads
+
+	// 新建了一个类型为 [][] byte 的 output channel
+	output := make(chan<- [][]byte, p.imageHeight)
+
+	// 新建了一个类型为 [] byte 的 workers channel
+	workers := make([]chan byte, p.threads)
+	for i := range workers {
+		workers[i] = make(chan byte, workerHeight+2)
+		go worker((workerHeight+2+p.imageHeight)%p.imageHeight, p.imageWidth, workers[i], output)
 	}
 
 	// Request the io goroutine to read in the image with the given filename.
@@ -40,47 +100,18 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	for turns := 0; turns < p.turns; turns++ {
 		for y := 0; y < p.imageHeight; y++ {
 			for x := 0; x < p.imageWidth; x++ {
-				// Placeholder for the actual Game of Life logic: flips alive cells to dead and dead cells to alive.
-				// Initialise the neighboursAlive to 0.
-				neighboursAlive := 0
-				for i := -1; i < 2; i++ {
-					for j := -1; j < 2; j++ {
-						// Mark all of the neighbours excluding the cell itself.
-						if i == 0 && j == 0 {
-							continue
-						}
-						// If the cell is on the edge of the diagram, mod it to fix the rule of the game.
-						if world[(y+i+p.imageHeight)%p.imageHeight][(x+j+p.imageWidth)%p.imageWidth] != 0 {
-							neighboursAlive += 1
-						}
-					}
-				}
-
-				// When the colour is white, the cell status is alive, parameter is 255.
-				if world[y][x] == 255 {
-					// If less than 2 or more than 3 neighbours, live cells dead.
-					if (neighboursAlive < 2) || (neighboursAlive > 3) {
-						nextWorld[y][x] = 0
-					} else {
-						nextWorld[y][x] = 255
-					}
-				}
-
-				// When the colour is black, the cell status is dead, parameter is 0.
-				if world[y][x] == 0 {
-					// If 3 neighbours alive, dead cells alive.
-					if neighboursAlive == 3 {
-						nextWorld[y][x] = 255
-					} else {
-						nextWorld[y][x] = 0
-					}
-				}
+				workers[p.threads] <- world[y][x]
+			}
+		}
+		for i := 0; i < p.threads; i++ {
+			for x := 0; x < p.imageWidth; x++ {
+				workers[i] <- world[(i*workerHeight-1+p.imageHeight)%p.imageHeight][x]
+				workers[i] <- world[((i+1)*workerHeight+p.imageHeight)%p.imageHeight][x]
 			}
 		}
 		for y := 0; y < p.imageHeight; y++ {
 			for x := 0; x < p.imageWidth; x++ {
-				// Replace placeholder nextWorld[y][x] with the real world[y][x]
-				world[y][x] = nextWorld[y][x]
+				world[y][x] = <-workers[y/workerHeight]
 			}
 		}
 	}
