@@ -72,13 +72,13 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	workerHeight := p.imageHeight / p.threads
 
 	// 新建了一个类型为 [][] byte 的 output channel
-	output := make(chan<- [][]byte, p.imageHeight)
+	out := make(chan<- [][]byte, p.threads)
 
 	// 新建了一个类型为 [] byte 的 workers channel
 	workers := make([]chan byte, p.threads)
 	for i := range workers {
 		workers[i] = make(chan byte, workerHeight+2)
-		go worker((workerHeight+2+p.imageHeight)%p.imageHeight, p.imageWidth, workers[i], output)
+		go worker((workerHeight+2+p.imageHeight)%p.imageHeight, p.imageWidth, workers[i], out)
 	}
 
 	// Request the io goroutine to read in the image with the given filename.
@@ -96,10 +96,14 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		}
 	}
 
+	func 
+
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
 		for y := 0; y < p.imageHeight; y++ {
 			for x := 0; x < p.imageWidth; x++ {
+
+				//把整个送到worker里面
 				workers[p.threads] <- world[y][x]
 			}
 		}
