@@ -6,44 +6,77 @@ import (
 	"strings"
 )
 
-func worker(height int, width int, world chan byte, out chan<- [][]byte) {
-	//Create the 2D slice to store tempWorld
-	tempWorld := make([][]byte, height)
-	for i := range tempWorld {
-		tempWorld[i] = make([]byte, width)
+func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, totalThreads, currentThreads int) [][] byte{
+	workerWorld := make([][]byte, workerHeight + 2)
+	for j := range workerWorld {
+		workerWorld[j] = make([]byte, imageWidth)
 	}
 
-	for x := 0; x < width; x++ {
-		tempWorld[0][x] = <-world
-		tempWorld[height][x] = <-world
-	}
-	for y := 1; y < height-1; y++ {
-		for x := 0; x < width; x++ {
-			tempWorld[y][x] = <-world
+	if currentThreads == 0{
+		for x := 0; x < imageWidth; x++ {
+			workerWorld[0][x]=world[imageHeight - 1][x]
+		}
+	}else{
+		for x := 0; x < imageWidth; x++ {
+			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
 		}
 	}
 
-	for y := 1; y < height-1; y++ {
-		for x := 0; x < width; x++ {
-			neighboursAlive := 0
+	for y := 1; y <= workerHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
+		}
+	}
+
+	if currentThreads == totalThreads - 1{
+		for x := 0; x < imageWidth; x++ {
+			workerWorld[workerHeight+1][x]=world[0][x]
+		}
+	}else {
+		for x := 0; x < imageWidth; x++ {
+			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
+		}
+	}
+
+	return workerWorld
+}
+
+// worker function
+func worker(world [][]byte, imageHeight int, imageWidth int,out chan<- [][]byte){
+	tempWorld := make([][]byte, imageHeight + 2)
+	for i := range world {
+		tempWorld[i] = make([]byte, imageWidth)
+	}
+
+	for y := 1; y <= imageHeight; y++ {
+		for x := 0; x < imageWidth; x++ {
+			var neighboursAlive = 0
+
 			for i := -1; i < 2; i++ {
 				for j := -1; j < 2; j++ {
+					// Mark all of the neighbours excluding the cell itself.
 					if i == 0 && j == 0 {
 						continue
 					}
-					if tempWorld[(y+i+height)%height][(x+j+width)%width] != 0 {
-						neighboursAlive++
+					// If the cell is on the edge of the diagram, mod it to fix the rule of the game.
+					if world[y+i][(x+j+imageWidth)%imageWidth] != 0 {
+						neighboursAlive += 1
 					}
+
 				}
 			}
-			if tempWorld[y][x] == 255 {
+			if world[y][x] == 255 {
+				// If less than 2 or more than 3 neighbours, live cells dead.
 				if (neighboursAlive < 2) || (neighboursAlive > 3) {
 					tempWorld[y][x] = 0
 				} else {
 					tempWorld[y][x] = 255
 				}
 			}
-			if tempWorld[y][x] == 0 {
+
+			// When the colour is black, the cell status is dead, parameter is 0.
+			if world[y][x] == 0 {
+				// If 3 neighbours alive, dead cells alive.
 				if neighboursAlive == 3 {
 					tempWorld[y][x] = 255
 				} else {
@@ -52,11 +85,8 @@ func worker(height int, width int, world chan byte, out chan<- [][]byte) {
 			}
 		}
 	}
-	for y := 1; y < height-1; y++ {
-		for x := 0; x < width; x++ {
-			out <- tempWorld
-		}
-	}
+
+	out <-tempWorld
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -66,19 +96,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	world := make([][]byte, p.imageHeight)
 	for i := range world {
 		world[i] = make([]byte, p.imageWidth)
-	}
-
-	// 新建一个 workHeight 存储每个 worker 的高度
-	workerHeight := p.imageHeight / p.threads
-
-	// 新建了一个类型为 [][] byte 的 output channel
-	out := make(chan<- [][]byte, p.threads)
-
-	// 新建了一个类型为 [] byte 的 workers channel
-	workers := make([]chan byte, p.threads)
-	for i := range workers {
-		workers[i] = make(chan byte, workerHeight+2)
-		go worker((workerHeight+2+p.imageHeight)%p.imageHeight, p.imageWidth, workers[i], out)
 	}
 
 	// Request the io goroutine to read in the image with the given filename.
@@ -96,26 +113,26 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		}
 	}
 
-	func 
-
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
-		for y := 0; y < p.imageHeight; y++ {
-			for x := 0; x < p.imageWidth; x++ {
 
-				//把整个送到worker里面
-				workers[p.threads] <- world[y][x]
-			}
+		workerHeight := p.imageHeight / p.threads
+		var out [8] chan [][]byte
+
+		for i:=0; i <p.threads; i++ {
+			out[i] = make (chan [][]byte)
+			workerWorld := buildWorkerWorld(world,  workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
+			go worker( workerWorld, workerHeight ,p.imageWidth , out[i])
 		}
-		for i := 0; i < p.threads; i++ {
-			for x := 0; x < p.imageWidth; x++ {
-				workers[i] <- world[(i*workerHeight-1+p.imageHeight)%p.imageHeight][x]
-				workers[i] <- world[((i+1)*workerHeight+p.imageHeight)%p.imageHeight][x]
-			}
-		}
-		for y := 0; y < p.imageHeight; y++ {
-			for x := 0; x < p.imageWidth; x++ {
-				world[y][x] = <-workers[y/workerHeight]
+		for i:=0; i<p.threads ; i++{
+			tempOut := <-out[i]
+			//println("tempOut  i=",i)
+			for y := 0; y < workerHeight; y++ {
+				for x := 0; x < p.imageWidth; x++ {
+					//print(tempOut[y+1][x])
+					world[i * workerHeight + y][x]=tempOut[y + 1][x]
+				}
+				//println()
 			}
 		}
 	}
