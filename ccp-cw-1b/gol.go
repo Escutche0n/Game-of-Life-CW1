@@ -12,16 +12,19 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 		workerWorld[j] = make([]byte, imageWidth)
 	}
 
-	if currentThreads == 0{
+	if currentThreads == 0 {
+		// the first thread need to refer to row No.15 (bottom row) as its top edge.
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[0][x]=world[imageHeight - 1][x]
 		}
-	}else{
+	} else {
+		// the later threads just refer to the row above its bottom (e.g. No.3, 7, 11)
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
 		}
 	}
 
+	// For y = workerHeight, the bottom extra row is packed together with the workerHeight.
 	for y := 1; y <= workerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
@@ -32,7 +35,7 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[workerHeight+1][x]=world[0][x]
 		}
-	}else {
+	} else {
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
 		}
