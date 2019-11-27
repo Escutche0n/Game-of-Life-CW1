@@ -151,10 +151,22 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		}
 	}
 
+	printBoard(d,p,world)
+
 	// Make sure that the Io has finished any output before exiting.
 	d.io.command <- ioCheckIdle
 	<-d.io.idle
 
 	// Return the coordinates of cells that are still alive.
 	alive <- finalAlive
+}
+
+func printBoard(d distributorChans, p golParams, world[][]byte){
+	d.io.command <- ioOutput
+	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight)}, "x")
+	for y := 0; y < p.imageHeight; y++ {
+		for x:= 0; x < p.imageWidth; x++ {
+			d.io.inputVal <- world[y][x]
+		}
+	}
 }
