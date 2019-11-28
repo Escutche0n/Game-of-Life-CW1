@@ -32,21 +32,25 @@ type cell struct {
 // distributorToIo defines all chans that the distributor goroutine will have to communicate with the io goroutine.
 // Note the restrictions on chans being send-only or receive-only to prevent bugs.
 type distributorToIo struct {
-	command chan ioCommand
+	command chan<- ioCommand
 	idle    <-chan bool
 
 	filename  chan<- string
 	inputVal  chan uint8
+
+	finalBoard chan <- [][]byte
 }
 
 // ioToDistributor defines all chans that the io goroutine will have to communicate with the distributor goroutine.
 // Note the restrictions on chans being send-only or receive-only to prevent bugs.
 type ioToDistributor struct {
-	command chan ioCommand
+	command <-chan ioCommand
 	idle    chan<- bool
 
 	filename  <-chan string
 	inputVal  chan uint8
+
+	finalBoard chan <- [][]byte
 }
 
 // distributorChans stores all the chans that the distributor goroutine will use.
@@ -83,9 +87,15 @@ func gameOfLife(p golParams, keyChan chan rune) []cell {
 	dChans.io.inputVal = inputVal
 	ioChans.distributor.inputVal = inputVal
 
+	finalBoard := make(chan [][] byte)
+	dChans.io.finalBoard = finalBoard
+	ioChans.distributor.finalBoard = finalBoard
+
 	aliveCells := make(chan []cell)
 
-	go distributor(p, dChans, aliveCells, keyChan)
+	//make slice of p.threads channels uint type
+ // for num threads go worker
+	go distributor(p, dChans, aliveCells,keyChan)
 	go pgmIo(p, ioChans)
 
 	alive := <-aliveCells
@@ -117,11 +127,12 @@ func main() {
 
 	flag.Parse()
 
-	params.turns = 5
+	params.turns = 10000000000
 
 	startControlServer(params)
 	key := make(chan rune)
 	go getKeyboardCommand(key)
+
 	gameOfLife(params, key)
 	StopControlServer()
 }

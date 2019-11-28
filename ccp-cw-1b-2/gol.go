@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//build workerworld correct
 func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, totalThreads, currentThreads int) [][] byte{
 	workerWorld := make([][]byte, workerHeight + 2)
 	for j := range workerWorld {
@@ -131,43 +132,50 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 	for turns := 0; turns < p.turns; turns++ {
 		running := true
 		select {
-		case <- ticker.C:
-			case c:= <- key:
-				if c == 'p' {
-					if true {
-							running = false
-							fmt.Println("Pausing")
-						} else if running == false {
-							running = true
-							fmt.Println("Continuing")
-						}
-				} else if c == 's' {
-					printBoard(d, p, world)
-				} else if c == 'q' {
-					if running == false {
-						printBoard(d, p, world)
-					}
+		case <-ticker.C:
+		case c := <-key:
+			if c == 'p' {
+				if true {
+					running = false
+					fmt.Println("Pausing")
+				} else if running == false {
+					running = true
+					fmt.Println("Continuing")
 				}
-			case <-ticker.C:
+			} else if c == 's' {
 				printBoard(d, p, world)
+			} else if c == 'q' {
+				if running == false {
+					printBoard(d, p, world)
+				}
+			}
+		case <-ticker.C:
+			printBoard(d, p, world)
 
 		default:
+			break
+		}
+
+		//Put logic outside of select such that when other cases run, the logic doesn't skip a turn.
 		workerHeight := p.imageHeight / p.threads
 		out := make([] chan byte, p.threads)
 
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
+			//build slices the workers need to work on
 			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
 			go worker(workerChan, workerHeight+2, p.imageWidth, out[i])
+			//Send world cells to workers
 			for y := 0; y < workerHeight+2; y++ {
 				for x := 0; x < p.imageWidth; x++ {
 					workerChan <- workerWorld[y][x]
 				}
 			}
-			}
-			for i := 0; i < p.threads; i++ {
-				tempOut := make([][]byte, workerHeight)
+		}
+		for i := 0; i < p.threads; i++ {
+			//slices from workers
+			tempOut := make([][]byte, workerHeight)
 				for i := range tempOut {
 					tempOut[i] = make([]byte, p.imageWidth)
 				}
@@ -184,7 +192,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 					}
 				}
 			}
-		}
+
 	}
 		// Create an empty slice to store coordinates of cells that are still alive after p.turns are done.
 		var finalAlive []cell
@@ -196,15 +204,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				}
 			}
 		}
-		// Make sure that the Io has finished any output before exiting.
-		//printBoard(d, p, world)
-	d.io.command <- ioOutput
-	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight), strconv.Itoa(p.turns)}, "x")
-	for y := 0; y < p.imageHeight; y++ {
-		for x := 0; x < p.imageWidth; x++ {
-			d.io.inputVal <- world[y][x]
-		}
-	}
+
 		d.io.command <- ioCheckIdle
 		<-d.io.idle
 		// Return the coordinates of cells that are still alive.
