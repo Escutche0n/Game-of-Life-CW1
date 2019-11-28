@@ -26,6 +26,8 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 
 	for y := 1; y <= workerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
+			// 16 is out of range :(
+			//Reaches 16 if workerHeight = 3, currentThread = 5, y > 1
 			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
 		}
 	}
@@ -157,38 +159,45 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		}
 
 		//Put logic outside of select such that when other cases run, the logic doesn't skip a turn.
-		workerHeight := p.imageHeight / p.threads
+		workerHeight := float32(p.imageHeight) / float32(p.threads)
 		out := make([] chan byte, p.threads)
 
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
+			endY := int(float32(i+1)*workerHeight)
+			startY := int(float32(i)*workerHeight)
+			intWorkerHeight := endY - startY
+			fmt.Println("started i = ", i)
 			//build slices the workers need to work on
-			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
-			go worker(workerChan, workerHeight+2, p.imageWidth, out[i])
+			workerWorld := buildWorkerWorld(world, intWorkerHeight, p.imageHeight, p.imageWidth, p.threads, i)
+			fmt.Println("build world for i")
+			go worker(workerChan, intWorkerHeight+2, p.imageWidth, out[i])
 			//Send world cells to workers
-			for y := 0; y < workerHeight+2; y++ {
+			for y := 0; y < intWorkerHeight+2; y++ {
 				for x := 0; x < p.imageWidth; x++ {
 					workerChan <- workerWorld[y][x]
 				}
 			}
+			fmt.Println("sent world for i", i)
 		}
 		for i := 0; i < p.threads; i++ {
+			endY := int(float32(i+1) * workerHeight)
+			startY := int(float32(i) * workerHeight)
+			intWorkerHeight := endY - startY
 			//slices from workers
-			tempOut := make([][]byte, workerHeight)
+			tempOut := make([][]byte, intWorkerHeight)
 				for i := range tempOut {
 					tempOut[i] = make([]byte, p.imageWidth)
 				}
-				for y := 0; y < workerHeight; y++ {
+				for y := 0; y < intWorkerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
 						tempOut[y][x] = <-out[i]
 					}
 				}
-				//println("tempOut  i=",i)
-				for y := 0; y < workerHeight; y++ {
+				for y := 0; y < intWorkerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
-						//print(tempOut[y+1][x])
-						world[i*workerHeight+y][x] = tempOut[y][x]
+						world[i*intWorkerHeight+y][x] = tempOut[y][x]
 					}
 				}
 			}
