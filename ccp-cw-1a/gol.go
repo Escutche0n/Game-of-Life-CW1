@@ -16,9 +16,9 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	}
 
 	// Created another 2D slice to store the world that has cache.
-	nextWorld := make([][]byte, p.imageHeight)
-	for i := range nextWorld {
-		nextWorld[i] = make([]byte, p.imageWidth)
+	tempWorld := make([][]byte, p.imageHeight)
+	for i := range tempWorld {
+		tempWorld[i] = make([]byte, p.imageWidth)
 	}
 
 	// Request the io goroutine to read in the image with the given filename.
@@ -40,7 +40,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	for turns := 0; turns < p.turns; turns++ {
 		for y := 0; y < p.imageHeight; y++ {
 			for x := 0; x < p.imageWidth; x++ {
-				// Placeholder for the actual Game of Life logic: flips alive cells to dead and dead cells to alive.
 				// Initialise the neighboursAlive to 0.
 				neighboursAlive := 0
 				for i := -1; i < 2; i++ {
@@ -50,7 +49,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 							continue
 						}
 						// If the cell is on the edge of the diagram, mod it to fix the rule of the game.
-						if world[(y+i+p.imageHeight)%p.imageHeight][(x+j+p.imageWidth)%p.imageWidth] != 0 {
+						if world[(y + i + p.imageHeight) % p.imageHeight][(x + j + p.imageWidth) % p.imageWidth] != 0 {
 							neighboursAlive += 1
 						}
 					}
@@ -60,9 +59,9 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 				if world[y][x] == 255 {
 					// If less than 2 or more than 3 neighbours, live cells dead.
 					if (neighboursAlive < 2) || (neighboursAlive > 3) {
-						nextWorld[y][x] = 0
+						tempWorld[y][x] = 0
 					} else {
-						nextWorld[y][x] = 255
+						tempWorld[y][x] = 255
 					}
 				}
 
@@ -70,9 +69,9 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 				if world[y][x] == 0 {
 					// If 3 neighbours alive, dead cells alive.
 					if neighboursAlive == 3 {
-						nextWorld[y][x] = 255
+						tempWorld[y][x] = 255
 					} else {
-						nextWorld[y][x] = 0
+						tempWorld[y][x] = 0
 					}
 				}
 			}
@@ -80,7 +79,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		for y := 0; y < p.imageHeight; y++ {
 			for x := 0; x < p.imageWidth; x++ {
 				// Replace placeholder nextWorld[y][x] with the real world[y][x]
-				world[y][x] = nextWorld[y][x]
+				world[y][x] = tempWorld[y][x]
 			}
 		}
 	}
@@ -100,8 +99,8 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	d.io.command <- ioOutput
 	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight), strconv.Itoa(p.turns)}, "x")
 
-	// Send the world to finalBoard
-	d.io.finalBoard <- world
+	// Send the world to board
+	d.io.board <- world
 
 	// Make sure that the Io has finished any output before exiting.
 	d.io.command <- ioCheckIdle
