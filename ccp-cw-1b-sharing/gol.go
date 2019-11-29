@@ -11,41 +11,37 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 	for j := range workerWorld {
 		workerWorld[j] = make([]byte, imageWidth)
 	}
-
 	if currentThreads == 0 {
 		// the first thread need to refer to row No.15 (bottom row) as its top edge.
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[imageHeight - 1][x]
+			workerWorld[0][x] = world[imageHeight - 1][x]
 		}
 	} else {
 		// the later threads just refer to the row above its bottom (e.g. No.3, 7, 11)
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
+			workerWorld[0][x] = world[currentThreads * workerHeight - 1][x]
 		}
 	}
-
 	// For y = workerHeight, the bottom extra row is packed together with the workerHeight.
 	for y := 1; y <= workerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
+			workerWorld[y][x] = world[currentThreads * workerHeight + y - 1][x]
 		}
 	}
-
 	if currentThreads == totalThreads - 1{
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[0][x]
+			workerWorld[workerHeight+1][x] = world[0][x]
 		}
 	} else {
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
+			workerWorld[workerHeight + 1][x] = world[(currentThreads + 1) * workerHeight][x]
 		}
 	}
-
 	return workerWorld
 }
 
 // worker function
-func worker(world [][]byte, imageHeight int, imageWidth int,out chan<- [][]byte){
+func worker(world [][]byte, imageHeight int, imageWidth int, outChan chan<- [][]byte){
 	tempWorld := make([][]byte, imageHeight + 2)
 	for i := range world {
 		tempWorld[i] = make([]byte, imageWidth)
@@ -62,10 +58,9 @@ func worker(world [][]byte, imageHeight int, imageWidth int,out chan<- [][]byte)
 						continue
 					}
 					// If the cell is on the edge of the diagram, mod it to fix the rule of the game.
-					if world[y+i][(x+j+imageWidth)%imageWidth] != 0 {
+					if world[y + i][(x + j + imageWidth) % imageWidth] != 0 {
 						neighboursAlive += 1
 					}
-
 				}
 			}
 			if world[y][x] == 255 {
@@ -89,7 +84,7 @@ func worker(world [][]byte, imageHeight int, imageWidth int,out chan<- [][]byte)
 		}
 	}
 
-	out <-tempWorld
+	outChan <-tempWorld
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -108,7 +103,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	// The io goroutine sends the requested image byte by byte, in rows.
 	for y := 0; y < p.imageHeight; y++ {
 		for x := 0; x < p.imageWidth; x++ {
-			val := <-d.io.inputVal
+			val := <- d.io.inputVal
 			if val != 0 {
 				fmt.Println("Alive cell at", x, y)
 				world[y][x] = val
@@ -120,22 +115,20 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	for turns := 0; turns < p.turns; turns++ {
 
 		workerHeight := p.imageHeight / p.threads
-		var out [8] chan [][]byte
+		var outChan [8] chan [][]byte
 
 		for i:=0; i <p.threads; i++ {
-			out[i] = make (chan [][]byte)
-			workerWorld := buildWorkerWorld(world,  workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
-			go worker( workerWorld, workerHeight ,p.imageWidth , out[i])
+			outChan[i] = make (chan [][]byte)
+			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
+			go worker( workerWorld, workerHeight ,p.imageWidth , outChan[i])
 		}
 		for i:=0; i<p.threads ; i++{
-			tempOut := <-out[i]
+			tempOut := <-outChan[i]
 			//println("tempOut  i=",i)
 			for y := 0; y < workerHeight; y++ {
 				for x := 0; x < p.imageWidth; x++ {
-					//print(tempOut[y+1][x])
-					world[i * workerHeight + y][x]=tempOut[y + 1][x]
+					world[i * workerHeight + y][x] = tempOut[y + 1][x]
 				}
-				//println()
 			}
 		}
 	}
@@ -151,22 +144,10 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 		}
 	}
 
-	printBoard(d,p,world)
-
 	// Make sure that the Io has finished any output before exiting.
 	d.io.command <- ioCheckIdle
 	<-d.io.idle
 
 	// Return the coordinates of cells that are still alive.
 	alive <- finalAlive
-}
-
-func printBoard(d distributorChans, p golParams, world[][]byte){
-	d.io.command <- ioOutput
-	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight)}, "x")
-	for y := 0; y < p.imageHeight; y++ {
-		for x:= 0; x < p.imageWidth; x++ {
-			d.io.inputVal <- world[y][x]
-		}
-	}
 }
