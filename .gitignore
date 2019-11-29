@@ -1,5 +1,9 @@
 .DS_Store
 .idea/
-*.pgm
+ccp-cw-1a/out/
+ccp-cw-1b-channel/out/
+ccp-cw-1b-channel/out/
+Ccp-cw-2/out/
+Ccp-cw-3/out/
 ccp-cw-1b/gameoflife
 ccp-cw-1b/gameoflife
