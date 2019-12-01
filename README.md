@@ -28,7 +28,7 @@ All functions in the above files have been thoroughly commented. If you have any
 
 ## Stages
 
-### Stage 1a (Up to 20%) - Serial Code
+### Stage 1a (Up to 20%) - Serial Code ✅
 
 Implement the Game of Life logic as it was described in the task introduction. This should be a single-threaded implementation that will serve as a starting point in subsequent stages. Your Game of Life should evolve for the number of turns specified in `golParams.turns`. After completing all the turns:
 
@@ -39,7 +39,7 @@ Implement the Game of Life logic as it was described in the task introduction. T
 
 ------
 
-### Stage 1b (Up to 40%) - Divide and Conquer
+### Stage 1b (Up to 40%) - Divide and Conquer ✅
 
 The Game of Life program developed in Stage 1a is single-threaded. Parallelise your Game of Life so that it uses worker threads to calculate the new state of the board. You should implement a distributor that tasks different worker threads to operate on different parts of the image in parallel. The number of worker threads you should create is specified in the `golParams.threads` field.
 
