@@ -151,16 +151,16 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				}
 			}
 		case <-ticker.C:
-			var finalAlive []cell
-			// Go through the world and append the cells that are still alive.
+			var instanceAlive = 0
 			for y := 0; y < p.imageHeight; y++ {
-				for x := 0; x < p.imageWidth; x++ {
-					if world[y][x] != 0 {
-						finalAlive = append(finalAlive, cell{x: x, y: y})
+				for x :=0; x < p.imageWidth; x++ {
+					if world[y][x] == 255 {
+						instanceAlive += 1
 					}
 				}
 			}
-			fmt.Println("number of alive cells is:", len(finalAlive))
+
+			fmt.Println("number of alive cells is:", instanceAlive)
 
 		default:
 		}
@@ -202,7 +202,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				}
 			}
 	}
-		// Create an empty slice to store coordinates of cells that are still alive after p.turns are done.
 		var finalAlive []cell
 		// Go through the world and append the cells that are still alive.
 		for y := 0; y < p.imageHeight; y++ {
