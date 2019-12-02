@@ -125,7 +125,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		}
 	}
 
-	// created a 2s timer called ticker.
+	// created a 2s ticker.
 	ticker := time.NewTicker(200 * time.Microsecond)
 
 	// Calculate the new state of Game of Life after the given number of turns.
