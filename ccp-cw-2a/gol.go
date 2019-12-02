@@ -130,30 +130,39 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
-		running := false
 		select {
-		case <-ticker.C:
-		case c := <-key:
+		// case <-ticker.C:
+		case c := <- key:
 			if c == 's' {
-				running = true
-				printBoard(d, p, world)
-			} else if c == 'p' {
-				if true {
-					running = false
-					fmt.Println("Pausing")
-				} else if running == false {
-					running = true
-					fmt.Println("Continuing")
-				}
+				printBoard(d, p, world,turns)
 			} else if c == 'q' {
+				printBoard(d, p, world, turns)
 				fmt.Println("Terminated.")
 				return
+			} else if c == 'p' {
+				fmt.Println(turns)
+				fmt.Println("pausing")
+				for {
+					tempKey := <-key
+					if tempKey == 'p' {
+						fmt.Println("continuing.")
+						break
+					}
+				}
 			}
 		case <-ticker.C:
-			printBoard(d, p, world)
+			var finalAlive []cell
+			// Go through the world and append the cells that are still alive.
+			for y := 0; y < p.imageHeight; y++ {
+				for x := 0; x < p.imageWidth; x++ {
+					if world[y][x] != 0 {
+						finalAlive = append(finalAlive, cell{x: x, y: y})
+					}
+				}
+			}
+			fmt.Println("number of alive cells is:", len(finalAlive))
 
 		default:
-			break
 		}
 
 		//Put logic outside of select such that when other cases run, the logic doesn't skip a turn.
@@ -210,12 +219,8 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		alive <- finalAlive
 	}
 
-func printBoard(d distributorChans, p golParams, world[][]byte){
+func printBoard(d distributorChans, p golParams, world[][]byte, turn int){
 	d.io.command <- ioOutput
-	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight), strconv.Itoa(p.turns)}, "x")
-	for y := 0; y < p.imageHeight; y++ {
-		for x := 0; x < p.imageWidth; x++ {
-			d.io.inputVal <- world[y][x]
-		}
-	}
+	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight), strconv.Itoa(turn)}, "x")
+	d.io.outputWorld <- world
 }

@@ -7,3 +7,7 @@ Ccp-cw-2/out/
 Ccp-cw-3/out/
 ccp-cw-1b/gameoflife
 ccp-cw-1b/gameoflife
+*.pgm
+ccp-cw-2a/gameoflife
+ccp-cw-2a/gameoflife
+ccp-cw-2a/out/512x512x10000000000.pgm

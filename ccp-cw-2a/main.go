@@ -50,7 +50,7 @@ type ioToDistributor struct {
 	filename  <-chan string
 	inputVal  chan uint8
 
-	outputWorld chan <- [][]byte
+	outputWorld <- chan [][]byte
 }
 
 // distributorChans stores all the chans that the distributor goroutine will use.
@@ -127,7 +127,7 @@ func main() {
 
 	flag.Parse()
 
-	params.turns = 10000000000
+	params.turns = 1000
 
 	startControlServer(params)
 	key := make(chan rune)
