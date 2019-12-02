@@ -126,7 +126,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 	}
 
 	// created a 2s ticker.
-	ticker := time.NewTicker(200 * time.Microsecond)
+	ticker := time.NewTicker(2000 * time.Millisecond)
 
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
@@ -192,7 +192,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 					}
 				}
 			}
-
 	}
 		// Create an empty slice to store coordinates of cells that are still alive after p.turns are done.
 		var finalAlive []cell
