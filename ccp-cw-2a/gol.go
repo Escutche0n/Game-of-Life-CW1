@@ -130,11 +130,14 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
-		running := true
+		running := false
 		select {
 		case <-ticker.C:
 		case c := <-key:
-			if c == 'p' {
+			if c == 's' {
+				running = true
+				printBoard(d, p, world)
+			} else if c == 'p' {
 				if true {
 					running = false
 					fmt.Println("Pausing")
@@ -142,12 +145,9 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 					running = true
 					fmt.Println("Continuing")
 				}
-			} else if c == 's' {
-				printBoard(d, p, world)
 			} else if c == 'q' {
-				if running == false {
-					printBoard(d, p, world)
-				}
+				fmt.Println("Terminated.")
+				return
 			}
 		case <-ticker.C:
 			printBoard(d, p, world)
