@@ -14,14 +14,8 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 		workerWorld[j] = make([]byte, imageWidth)
 	}
 
-	if currentThreads == 0{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[imageHeight - 1][x]
-		}
-	}else{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
-		}
+	for x := 0; x < imageWidth; x++ {
+		workerWorld[0][x]=world[(currentThreads * workerHeight + imageHeight - 1) % imageHeight][x]
 	}
 
 	for y := 1; y <= workerHeight; y++ {
@@ -36,7 +30,7 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 		}
 	}else {
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
+			workerWorld[workerHeight+1][x]=world[((currentThreads+1)*workerHeight + imageHeight)%imageHeight][x]
 		}
 	}
 	return workerWorld
