@@ -169,6 +169,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		workerHeight := p.imageHeight / p.threads
 		out := make([] chan byte, p.threads)
 
+
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
