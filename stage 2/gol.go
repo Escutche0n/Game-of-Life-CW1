@@ -114,7 +114,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 	}
 
 	// created a 2s ticker.
-	ticker := time.NewTicker(2000 * time.Millisecond)
+	ticker := time.NewTicker(2 * time.Second)
 
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
@@ -156,7 +156,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		//Put logic outside of select such that when other cases run, the logic doesn't skip a turn.
 		workerHeight := p.imageHeight / p.threads
 		out := make([] chan byte, p.threads)
-		remainder := p.imageHeight % p.threads
 
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
@@ -171,22 +170,18 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 			}
 		}
 		for i := 0; i < p.threads; i++ {
-			actualHeight := workerHeight
-			if i ==0 {
-				actualHeight += remainder
-			}
 			//slices from workers
-			tempOut := make([][]byte, actualHeight)
+			tempOut := make([][]byte, workerHeight)
 				for i := range tempOut {
 					tempOut[i] = make([]byte, p.imageWidth)
 				}
-				for y := 0; y < actualHeight; y++ {
+				for y := 0; y < workerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
 						tempOut[y][x] = <-out[i]
 					}
 				}
 				//println("tempOut  i=",i)
-				for y := 0; y < actualHeight; y++ {
+				for y := 0; y < workerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
 						//print(tempOut[y+1][x])
 						world[i*workerHeight+y][x] = tempOut[y][x]
