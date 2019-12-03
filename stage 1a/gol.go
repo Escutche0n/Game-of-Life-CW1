@@ -57,7 +57,6 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 
 				// When the colour is white, the cell status is alive, parameter is 255.
 				// When the colour is black, the cell status is dead, parameter is 0.
-
 				if world[y][x] == 255 {
 					// If less than 2 or more than 3 neighbours, live cells dead.
 					if (neighboursAlive < 2) || (neighboursAlive > 3) {
