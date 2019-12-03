@@ -24,6 +24,7 @@ func buildWorkerWorld(world [][]byte, intWorkerHeight, imageHeight, imageWidth, 
 			workerWorld[y][x]=world[(int(float32(currentThreads) * workerHeight) + y - 1)][x]
 		}
 	}
+
 	// bottom halo
 	for x := 0; x < imageWidth; x++ {
 		workerWorld[intWorkerHeight+1][x]=world[(int(float32(currentThreads + 1 + imageHeight)*workerHeight) % imageHeight)][x]
