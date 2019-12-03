@@ -49,7 +49,7 @@ The Game of Life program developed in Stage 1a is single-threaded. Parallelise y
 
 ------
 
-### Stage 2a (Up to 45%) - User Interaction
+### Stage 2a (Up to 45%) - User Interaction ✅
 
 So far we ran the Game of Life through the testing and benchmarking framework. It is also possible to run it directly with the `make gol`command. You may notice that once started, you have no control over the execution.
 
@@ -63,7 +63,7 @@ Use the `getKeyboardCommand` function provided in `control.go` to implement the 
 
 ------
 
-### Stage 2b (Up to 50%) - Periodic Events
+### Stage 2b (Up to 50%) - Periodic Events ✅
 
 The lab sheets included the use of a timer. Now using a ticker thread, print the number of cells that are still alive every 2 seconds.
 
