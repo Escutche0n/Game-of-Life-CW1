@@ -100,7 +100,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 	d.io.filename <- strings.Join([]string{strconv.Itoa(p.imageWidth), strconv.Itoa(p.imageHeight), strconv.Itoa(p.turns)}, "x")
 
 	// Send the world to board
-	d.io.board <- world
+	d.io.outputWorld <- world
 
 	// Make sure that the Io has finished any output before exiting.
 	d.io.command <- ioCheckIdle

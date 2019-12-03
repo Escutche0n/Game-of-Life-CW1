@@ -39,7 +39,7 @@ func writePgmImage(p golParams, i ioChans) {
 	}
 
 	// TODO: write a for-loop to receive the world from the distributor when outputting.
-	content := <- i.distributor.board
+	content := <- i.distributor.outputWorld
 	for y := 0; y < p.imageHeight; y++ {
 		for x :=0; x < p.imageWidth; x++ {
 			world[y][x] = content[y][x]

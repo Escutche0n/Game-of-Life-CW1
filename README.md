@@ -71,7 +71,7 @@ The lab sheets included the use of a timer. Now using a ticker thread, print the
 
 ------
 
-### Stage 3 (Up to 55%) - Division of Work
+### Stage 3 (Up to 55%) - Division of Work ❎
 
 Right now your implementation should allow for the number of worker threads to be equal to some **power** of 2 (i.e 2,4,8,16...). Make changes to your implementation so that it supports all **multiples** of 2 (i.e. 2,4,6,8,10,12...). Expand `main_test.go` so that the tests verify the 16x16 board on 6, 10 and 12 worker threads.
 
@@ -93,7 +93,7 @@ Draw conclusions about the performance of your system in your report.
 
 ------
 
-### Stage 5 (Up to 80%) - Extensions
+### Stage 5 (Up to 80%) - Extensions ❎
 
 #### Option 1
 
