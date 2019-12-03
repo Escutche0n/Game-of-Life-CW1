@@ -8,37 +8,29 @@ import (
 )
 
 //build workerworld correct
-func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, totalThreads, currentThreads int) [][] byte{
-	workerWorld := make([][]byte, workerHeight + 2)
+func buildWorkerWorld(world [][]byte, intWorkerHeight, imageHeight, imageWidth, currentThreads int) [][] byte{
+	workerWorld := make([][]byte, intWorkerHeight + 2)
 	for j := range workerWorld {
 		workerWorld[j] = make([]byte, imageWidth)
 	}
 
-	if currentThreads == 0{
+	// top halo
+	for x := 0; x < imageWidth; x++ {
+		workerWorld[0][x]=world[(currentThreads * intWorkerHeight + imageHeight - 1) % imageHeight][x]
+	}
+
+	// centre-cell
+	for y := 1; y <= intWorkerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[imageHeight - 1][x]
-		}
-	}else{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
+			workerWorld[y][x]=world[(currentThreads * intWorkerHeight + imageHeight + y - 1) % imageHeight][x]
 		}
 	}
 
-	for y := 1; y <= workerHeight; y++ {
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
-		}
+	// bottom halo
+	for x := 0; x < imageWidth; x++ {
+		workerWorld[intWorkerHeight+1][x]=world[((currentThreads + 1 + imageHeight)*intWorkerHeight) % imageHeight][x]
 	}
 
-	if currentThreads == totalThreads - 1{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[0][x]
-		}
-	}else {
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
-		}
-	}
 	return workerWorld
 }
 
@@ -172,22 +164,23 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
-			endY := int(float32(i+1)*workerHeight)
-			startY := int(float32(i)*workerHeight)
+			endY   := int(float32(i + 1) * workerHeight)
+			startY := int(float32(i) * workerHeight)
+
 			intWorkerHeight := endY - startY
+
 			fmt.Println("started i = ", i)
-			//build slices the workers need to work on
-			workerWorld := buildWorkerWorld(world, intWorkerHeight, p.imageHeight, p.imageWidth, p.threads, i)
-			go worker(workerChan, intWorkerHeight+2, p.imageWidth, out[i])
+			workerWorld := buildWorkerWorld(world, intWorkerHeight, p.imageHeight, p.imageWidth, i)
+			go worker(workerChan, intWorkerHeight + 2, p.imageWidth, out[i])
 			//Send world cells to workers
-			for y := 0; y < intWorkerHeight+2; y++ {
+			for y := 0; y < intWorkerHeight + 2; y++ {
 				for x := 0; x < p.imageWidth; x++ {
 					workerChan <- workerWorld[y][x]
 				}
 			}
 		}
 		for i := 0; i < p.threads; i++ {
-			endY := int(float32(i+1) * workerHeight)
+			endY   := int(float32(i + 1) * workerHeight)
 			startY := int(float32(i) * workerHeight)
 			intWorkerHeight := endY - startY
 			//slices from workers
@@ -204,7 +197,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				for y := 0; y < intWorkerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
 						//print(tempOut[y+1][x])
-						world[i*intWorkerHeight+y][x] = tempOut[y][x]
+						world[i * intWorkerHeight + y][x] = tempOut[y][x]
 					}
 				}
 			}

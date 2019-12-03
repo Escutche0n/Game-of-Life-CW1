@@ -14,31 +14,23 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, tot
 		workerWorld[j] = make([]byte, imageWidth)
 	}
 
-	if currentThreads == 0{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[imageHeight - 1][x]
-		}
-	}else{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[0][x]=world[currentThreads * workerHeight - 1][x]
-		}
+	// top halo
+	for x := 0; x < imageWidth; x++ {
+		workerWorld[0][x]=world[(currentThreads * workerHeight + imageHeight - 1) % imageHeight][x]
 	}
 
+	// centre-cell
 	for y := 1; y <= workerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
 			workerWorld[y][x]=world[currentThreads * workerHeight + y - 1][x]
 		}
 	}
 
-	if currentThreads == totalThreads - 1{
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[0][x]
-		}
-	}else {
-		for x := 0; x < imageWidth; x++ {
-			workerWorld[workerHeight+1][x]=world[(currentThreads+1)*workerHeight][x]
-		}
+	// bottom halo
+	for x := 0; x < imageWidth; x++ {
+		workerWorld[workerHeight + 1][x]=world[((currentThreads + 1 + imageHeight) * workerHeight) % imageHeight][x]
 	}
+
 	return workerWorld
 }
 
@@ -71,7 +63,7 @@ func worker(workerChan chan byte, imageHeight int, imageWidth int,out chan byte)
 						continue
 					}
 					// If the cell is on the edge of the diagram, mod it to fix the rule of the game.
-					if world[y+i][(x+j+imageWidth)%imageWidth] != 0 {
+					if world[y + i][(x + j + imageWidth) % imageWidth] != 0 {
 						neighboursAlive += 1
 					}
 				}
