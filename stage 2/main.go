@@ -130,9 +130,9 @@ func main() {
 	params.turns = 1000
 
 	startControlServer(params)
-	key := make(chan rune)
-	go getKeyboardCommand(key)
+	keyChan := make(chan rune)
+	go getKeyboardCommand(keyChan)
 
-	gameOfLife(params, key)
+	gameOfLife(params, keyChan)
 	StopControlServer()
 }

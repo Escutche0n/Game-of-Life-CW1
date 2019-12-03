@@ -91,7 +91,7 @@ func worker(workerChan chan byte, imageHeight int, imageWidth int,out chan byte)
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
-func distributor(p golParams, d distributorChans, alive chan []cell, key chan rune) {
+func distributor(p golParams, d distributorChans, alive chan []cell, keyChan chan rune) {
 
 	// Create the 2D slice to store the world.
 	world := make([][]byte, p.imageHeight)
@@ -120,7 +120,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 	for turns := 0; turns < p.turns; turns++ {
 		select {
 		// case <-ticker.C:
-		case c := <- key:
+		case c := <- keyChan:
 			if c == 's' {
 				printBoard(d, p, world,turns)
 			} else if c == 'q' {
@@ -131,7 +131,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				fmt.Println(turns)
 				fmt.Println("Pausing.")
 				for {
-					tempKey := <-key
+					tempKey := <-keyChan
 					if tempKey == 'p' {
 						fmt.Println("Continuing.")
 						break
