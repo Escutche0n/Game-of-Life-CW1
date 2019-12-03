@@ -8,7 +8,7 @@ import (
 )
 
 //build workerworld correct
-func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, totalThreads, currentThreads int) [][] byte{
+func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, currentThreads int) [][] byte{
 	workerWorld := make([][]byte, workerHeight + 2)
 	for j := range workerWorld {
 		workerWorld[j] = make([]byte, imageWidth)
@@ -156,7 +156,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
 			//build slices the workers need to work on
-			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, p.threads, i)
+			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, i)
 			go worker(workerChan, workerHeight+2, p.imageWidth, out[i])
 			//Send world cells to workers
 			for y := 0; y < workerHeight+2; y++ {
