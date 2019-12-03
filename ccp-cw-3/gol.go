@@ -8,7 +8,7 @@ import (
 )
 
 //build workerworld correct
-func buildWorkerWorld(world [][]byte, intWorkerHeight, imageHeight, imageWidth, currentThreads int) [][] byte{
+func buildWorkerWorld(world [][]byte, intWorkerHeight, imageHeight, imageWidth, currentThreads int, workerHeight float32) [][] byte{
 	workerWorld := make([][]byte, intWorkerHeight + 2)
 	for j := range workerWorld {
 		workerWorld[j] = make([]byte, imageWidth)
@@ -16,21 +16,18 @@ func buildWorkerWorld(world [][]byte, intWorkerHeight, imageHeight, imageWidth, 
 
 	// top halo
 	for x := 0; x < imageWidth; x++ {
-		workerWorld[0][x]=world[(currentThreads * intWorkerHeight + imageHeight - 1) % imageHeight][x]
+		workerWorld[0][x]=world[(int(float32(currentThreads) * workerHeight - 1) + imageHeight) % imageHeight][x]
 	}
-
 	// centre-cell
 	for y := 1; y <= intWorkerHeight; y++ {
 		for x := 0; x < imageWidth; x++ {
-			workerWorld[y][x]=world[(currentThreads * intWorkerHeight + imageHeight + y - 1) % imageHeight][x]
+			workerWorld[y][x]=world[(int(float32(currentThreads) * workerHeight) + y - 1)][x]
 		}
 	}
-
 	// bottom halo
 	for x := 0; x < imageWidth; x++ {
-		workerWorld[intWorkerHeight+1][x]=world[((currentThreads + 1 + imageHeight)*intWorkerHeight) % imageHeight][x]
+		workerWorld[intWorkerHeight+1][x]=world[(int(float32(currentThreads + 1 + imageHeight)*workerHeight) % imageHeight)][x]
 	}
-
 	return workerWorld
 }
 
@@ -164,13 +161,13 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		for i := 0; i < p.threads; i++ {
 			out[i] = make(chan byte)
 			workerChan := make(chan byte)
-			endY   := int(float32(i + 1) * workerHeight)
-			startY := int(float32(i) * workerHeight)
+			endY   := float32(i + 1) * workerHeight
+			startY := float32(i) * workerHeight
 
-			intWorkerHeight := endY - startY
+			workerHeight := endY - startY
+			intWorkerHeight := int(workerHeight)
 
-			fmt.Println("started i = ", i)
-			workerWorld := buildWorkerWorld(world, intWorkerHeight, p.imageHeight, p.imageWidth, i)
+			workerWorld := buildWorkerWorld(world, intWorkerHeight, p.imageHeight, p.imageWidth, i, workerHeight)
 			go worker(workerChan, intWorkerHeight + 2, p.imageWidth, out[i])
 			//Send world cells to workers
 			for y := 0; y < intWorkerHeight + 2; y++ {
@@ -197,7 +194,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				for y := 0; y < intWorkerHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
 						//print(tempOut[y+1][x])
-						world[i * intWorkerHeight + y][x] = tempOut[y][x]
+						world[int(float32(i) * workerHeight) + y][x] = tempOut[y][x]
 					}
 				}
 			}
