@@ -156,19 +156,19 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 
 		//Put logic outside of select such that when other cases run, the logic doesn't skip a turn.
 		workerHeight := p.imageHeight / p.threads
-		out := make([] chan byte, p.threads)
+		outChan := make([] chan byte, p.threads)
 		remainder := p.imageHeight % p.threads
 
 		for i := 0; i < p.threads; i++ {
-			out[i] = make(chan byte)
+			outChan[i] = make(chan byte)
 			workerChan := make(chan byte)
 			//build slices the workers need to work on
 			actualHeight := workerHeight
-			if i ==0 {
+			if i == 0 {
 				actualHeight += remainder
 			}
 			workerWorld := buildWorkerWorld(world, actualHeight, p.imageHeight, p.imageWidth, i)
-			go worker(workerChan, actualHeight+2, p.imageWidth, out[i])
+			go worker(workerChan, actualHeight+2, p.imageWidth, outChan[i])
 			//Send world cells to workers
 			for y := 0; y < actualHeight+2; y++ {
 				for x := 0; x < p.imageWidth; x++ {
@@ -178,7 +178,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 		}
 		for i := 0; i < p.threads; i++ {
 			actualHeight := workerHeight
-			if i ==0 {
+			if i == 0 {
 				actualHeight += remainder
 			}
 			//slices from workers
@@ -188,7 +188,7 @@ func distributor(p golParams, d distributorChans, alive chan []cell, key chan ru
 				}
 				for y := 0; y < actualHeight; y++ {
 					for x := 0; x < p.imageWidth; x++ {
-						tempOut[y][x] = <-out[i]
+						tempOut[y][x] = <-outChan[i]
 					}
 				}
 				//println("tempOut  i=",i)
