@@ -31,7 +31,7 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, cur
 }
 
 // worker function
-func worker(workerChan chan byte, imageHeight int, imageWidth int,out chan byte){
+func worker(workerChan chan byte, imageHeight int, imageWidth int,outChan chan byte){
 	// Created a new world  the channel
 	world := make([][]byte, imageHeight + 2)
 	for i := range world {
@@ -85,7 +85,7 @@ func worker(workerChan chan byte, imageHeight int, imageWidth int,out chan byte)
 	}
 	for y := 0; y < imageHeight;y++{
 		for x := 0; x < imageWidth; x++{
-			out <- tempWorld[y + 1][x]
+			outChan <- tempWorld[y + 1][x]
 		}
 	}
 }
