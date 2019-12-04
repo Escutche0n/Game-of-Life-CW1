@@ -34,6 +34,7 @@ var mutex = &sync.Mutex{}
 
 // worker function
 func worker(world [][]byte, tempWorld [][]byte, imageHeight int, imageWidth int, numOfWorker int, done func()){
+	// goroutine is finished executing to the WaitGroup (see defer)
 	defer done()
 	tempWorld = make([][]byte, imageHeight + 2)
 	for i := range world {
@@ -78,11 +79,10 @@ func worker(world [][]byte, tempWorld [][]byte, imageHeight int, imageWidth int,
 	}
 
 	mutex.Lock()
-	for y := 1; y < imageHeight+1; y++{
-		world[imageHeight*numOfWorker+y-1] = tempWorld[y] //access to memory
+	for y := 1; y < imageHeight + 1; y++{
+		world[imageHeight * numOfWorker + y - 1] = tempWorld[y] //access to memory
 	}
 	mutex.Unlock()
-
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -119,15 +119,13 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 
 		copy(workerWorld,world)
 
-		var wg sync.WaitGroup
-		wg.Add(p.threads)                                                    //using counter count the num of worker
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(p.threads)
 		for i := 0; i < p.threads; i++{
 
-			go   worker(world, buildWorkerWorld(workerWorld, workerHeight, p.imageHeight, p.imageWidth, p.threads),p.imageHeight, p.imageWidth,i,wg.Done)   //in workers they give the new world
-
+			go   worker(world, buildWorkerWorld(workerWorld, workerHeight, p.imageHeight, p.imageWidth, p.threads),p.imageHeight, p.imageWidth, i, waitGroup.Done)
 		}
-		wg.Wait()                                                       //wait for workers
-		//receive world parts and re-gather them
+		waitGroup.Wait()
 
 		world = workerWorld
 	}
