@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, currentThreads int) [][] byte{
@@ -28,9 +29,13 @@ func buildWorkerWorld(world [][]byte, workerHeight, imageHeight, imageWidth, cur
 	return workerWorld
 }
 
+// define a mutex.
+var mutex = &sync.Mutex{}
+
 // worker function
-func worker(world [][]byte, imageHeight int, imageWidth int, outChan chan<- [][]byte){
-	tempWorld := make([][]byte, imageHeight + 2)
+func worker(world [][]byte, tempWorld [][]byte, imageHeight int, imageWidth int, numOfWorker int, done func()){
+	defer done()
+	tempWorld = make([][]byte, imageHeight + 2)
 	for i := range world {
 		tempWorld[i] = make([]byte, imageWidth)
 	}
@@ -72,7 +77,12 @@ func worker(world [][]byte, imageHeight int, imageWidth int, outChan chan<- [][]
 		}
 	}
 
-	outChan <-tempWorld
+	mutex.Lock()
+	for y := 1; y < imageHeight+1; y++{
+		world[imageHeight*numOfWorker+y-1] = tempWorld[y] //access to memory
+	}
+	mutex.Unlock()
+
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -98,27 +108,28 @@ func distributor(p golParams, d distributorChans, alive chan []cell) {
 			}
 		}
 	}
-
+	workerHeight := p.imageHeight / p.threads
 	// Calculate the new state of Game of Life after the given number of turns.
 	for turns := 0; turns < p.turns; turns++ {
 
-		workerHeight := p.imageHeight / p.threads
-		var outChan [8] chan [][]byte
+		workerWorld := make([][]byte,p.imageHeight)
+		for i := range workerWorld{
+			workerWorld[i] = make([]byte, p.imageWidth)
+		}
 
-		for i:=0; i <p.threads; i++ {
-			outChan[i] = make (chan [][]byte)
-			workerWorld := buildWorkerWorld(world, workerHeight, p.imageHeight, p.imageWidth, i)
-			go worker( workerWorld, workerHeight ,p.imageWidth , outChan[i])
+		copy(workerWorld,world)
+
+		var wg sync.WaitGroup
+		wg.Add(p.threads)                                                    //using counter count the num of worker
+		for i := 0; i < p.threads; i++{
+
+			go   worker(world, buildWorkerWorld(workerWorld, workerHeight, p.imageHeight, p.imageWidth, p.threads),p.imageHeight, p.imageWidth,i,wg.Done)   //in workers they give the new world
+
 		}
-		for i:=0; i<p.threads ; i++{
-			tempOut := <-outChan[i]
-			//println("tempOut  i=",i)
-			for y := 0; y < workerHeight; y++ {
-				for x := 0; x < p.imageWidth; x++ {
-					world[i * workerHeight + y][x] = tempOut[y + 1][x]
-				}
-			}
-		}
+		wg.Wait()                                                       //wait for workers
+		//receive world parts and re-gather them
+
+		world = workerWorld
 	}
 
 	// Create an empty slice to store coordinates of cells that are still alive after p.turns are done.
